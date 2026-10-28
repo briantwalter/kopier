@@ -38,7 +38,7 @@ flowchart TD
 
 ## Build
 
-Requires macOS with Apple's Swift command line tools or Xcode. No third-party dependencies.
+Requires macOS 13 or later with Apple's Swift command line tools or Xcode. No third-party dependencies.
 
 ```sh
 ./build.sh
@@ -55,3 +55,7 @@ swift -module-cache-path /private/tmp/kopier-module-cache /private/tmp/kopier-hi
 ```
 
 Checks cover the cap, ordering, eviction, fresh sessions, clearing, and Unicode preservation.
+
+## Release 0.1-beta
+
+The GitHub prerelease includes an Apple Silicon app archive. Requires macOS 13 or later. The beta is locally signed and is not Developer ID signed or notarized.

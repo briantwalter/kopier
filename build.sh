@@ -5,7 +5,7 @@ mkdir -p Kopier.app/Contents/MacOS Kopier.app/Contents/Resources
 swift -module-cache-path /private/tmp/kopier-module-cache Scripts/MakeIcon.swift
 iconutil -c icns Assets/Kopier.iconset -o Kopier.app/Contents/Resources/Kopier.icns
 cp Assets/MenuIcon.png Kopier.app/Contents/Resources/MenuIcon.png
-swiftc -module-cache-path /private/tmp/kopier-module-cache Source/*.swift -o Kopier.app/Contents/MacOS/Kopier -framework AppKit
+swiftc -target "$(uname -m)-apple-macos13.0" -module-cache-path /private/tmp/kopier-module-cache Source/*.swift -o Kopier.app/Contents/MacOS/Kopier -framework AppKit
 cat > Kopier.app/Contents/Info.plist <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -14,7 +14,10 @@ cat > Kopier.app/Contents/Info.plist <<'PLIST'
 <key>CFBundleIdentifier</key><string>local.kopier.app</string>
 <key>CFBundleName</key><string>Kopier</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>1.0</string>
+<key>CFBundleShortVersionString</key><string>0.1</string>
+<key>CFBundleVersion</key><string>1</string>
+<key>CFBundleGetInfoString</key><string>Kopier 0.1-beta</string>
+<key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>CFBundleIconFile</key><string>Kopier</string>
 <key>LSUIElement</key><false/>
 <key>NSHighResolutionCapable</key><true/>
