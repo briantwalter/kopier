@@ -1,6 +1,9 @@
 import AppKit
+import Sparkle
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableViewDataSource, NSTableViewDelegate, NSTextViewDelegate {
+    private let updaterController = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: nil, userDriverDelegate: nil)
+    private var aboutWindow: NSWindow?
     private var statusItem: NSStatusItem!
     private var window: NSWindow!
     private let preview = ClipboardTextView()
@@ -17,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTa
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
+        updaterController.startUpdater()
         configureMenu()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let url = Bundle.main.url(forResource: "MenuIcon", withExtension: "png"), let icon = NSImage(contentsOf: url) {
@@ -129,6 +133,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTa
         let menu = NSMenu()
         let appItem = NSMenuItem()
         let appMenu = NSMenu(title: "Kopier")
+        let about = appMenu.addItem(withTitle: "About Kopier", action: #selector(showAbout), keyEquivalent: "")
+        about.target = self
+        appMenu.addItem(.separator())
+        let updates = appMenu.addItem(withTitle: "Check for Updates…", action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)), keyEquivalent: "")
+        updates.target = updaterController
+        appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Quit Kopier", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
         menu.addItem(appItem)
@@ -145,6 +155,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTa
         editItem.submenu = editMenu
         menu.addItem(editItem)
         NSApp.mainMenu = menu
+    }
+
+    @objc private func showAbout() {
+        if aboutWindow == nil {
+            let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 300),
+                                styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            panel.title = "About Kopier"
+            panel.isReleasedWhenClosed = false
+            let stack = NSStackView()
+            stack.orientation = .vertical
+            stack.alignment = .centerX
+            stack.spacing = 12
+            stack.translatesAutoresizingMaskIntoConstraints = false
+            let icon = NSImageView()
+            icon.image = NSApp.applicationIconImage
+            icon.imageScaling = .scaleProportionallyUpOrDown
+            icon.widthAnchor.constraint(equalToConstant: 80).isActive = true
+            icon.heightAnchor.constraint(equalToConstant: 80).isActive = true
+            icon.setAccessibilityLabel("Kopier icon")
+            stack.addArrangedSubview(icon)
+            let name = NSTextField(labelWithString: "Kopier")
+            name.font = .boldSystemFont(ofSize: 22)
+            name.alignment = .center
+            stack.addArrangedSubview(name)
+            let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+            let releaseDate = Bundle.main.object(forInfoDictionaryKey: "KopierReleaseDate") as? String ?? ""
+            for text in ["Version \(version)", "Released \(releaseDate)"] {
+                let label = NSTextField(labelWithString: text)
+                label.alignment = .center
+                label.textColor = .secondaryLabelColor
+                stack.addArrangedSubview(label)
+            }
+            panel.contentView!.addSubview(stack)
+            NSLayoutConstraint.activate([
+                stack.centerXAnchor.constraint(equalTo: panel.contentView!.centerXAnchor),
+                stack.centerYAnchor.constraint(equalTo: panel.contentView!.centerYAnchor),
+                stack.leadingAnchor.constraint(greaterThanOrEqualTo: panel.contentView!.leadingAnchor, constant: 20),
+                stack.trailingAnchor.constraint(lessThanOrEqualTo: panel.contentView!.trailingAnchor, constant: -20)
+            ])
+            panel.center()
+            aboutWindow = panel
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        aboutWindow?.makeKeyAndOrderFront(nil)
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
