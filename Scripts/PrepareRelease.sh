@@ -8,7 +8,8 @@ version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Release
 ./build.sh
 codesign --verify --deep --strict Kopier.app
 mkdir -p releases
-archive="releases/Kopier-$version.zip"
+architecture="$(uname -m)"
+archive="releases/Kopier-$version-macos-$architecture.zip"
 [[ ! -e "$archive" ]] || { print -u2 "Archive already exists: $archive. Never replace a published build."; exit 1; }
 ditto -c -k --sequesterRsrc --keepParent Kopier.app "$archive"
 # Keep previous archives and the prior appcast in releases/. Sparkle generates

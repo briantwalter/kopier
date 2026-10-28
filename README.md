@@ -74,7 +74,7 @@ The private update-signing key lives in the login Keychain under the Sparkle acc
 ./Scripts/PrepareRelease.sh v0.2-beta
 ```
 
-The script builds and verifies the app, creates a ZIP, signs it, and generates `releases/appcast.xml`. Retain previous ZIPs and the prior appcast in the ignored `releases/` folder so Sparkle can generate signed delta patches. It does not publish anything. Upload the new ZIP, appcast, and new `.delta` files to the matching GitHub release. Publish updater releases as regular GitHub releases: the feed uses GitHub’s `/releases/latest/download/appcast.xml`, which excludes GitHub prereleases. The app’s display version can still contain `-beta`.
+The script builds and verifies the app, creates a ZIP named `Kopier-VERSION-macos-ARCH.zip` (for example `Kopier-0.2-beta-macos-arm64.zip`), signs it, and generates `releases/appcast.xml`. Retain previous ZIPs and the prior appcast in the ignored `releases/` folder so Sparkle can generate signed delta patches. It does not publish anything. Upload the new ZIP, appcast, and new `.delta` files to the matching GitHub release. Publish updater releases as regular GitHub releases: the feed uses GitHub’s `/releases/latest/download/appcast.xml`, which excludes GitHub prereleases. The app’s display version can still contain `-beta`.
 
 The first Sparkle-enabled version must be installed manually by existing 0.1-beta users. Subsequent releases can update in the app. Until the first feed is published, update checks report a feed error. Test installation between two distinct builds before distributing; delta generation alone does not verify the full installed update flow.
 
