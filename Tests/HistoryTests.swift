@@ -1,0 +1,13 @@
+var history = ClipboardHistory()
+assert(history.count == 0)
+for index in 0..<1_005 { history.record("Copy \(index)") }
+assert(history.count == 1_000, "History must stay capped")
+assert(history[0] == "Copy 1004", "Newest copy should be first")
+assert(history[999] == "Copy 5", "Oldest excess records must be evicted")
+let otherRun = ClipboardHistory()
+assert(otherRun.count == 0, "New sessions must start empty")
+history.removeAll()
+assert(history.count == 0)
+history.record("Hello 👋\nSecond line")
+assert(history[0] == "Hello 👋\nSecond line", "Unicode and line breaks must survive")
+print("History tests passed: cap, ordering, eviction, fresh session, clear, Unicode.")
