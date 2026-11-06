@@ -8,6 +8,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTa
     private var window: NSWindow!
     private let preview = ClipboardTextView()
     private let automatic = NSButton(checkboxWithTitle: "Automatically remove formatting when I copy text", target: nil, action: nil)
+    private let typingMode = NSButton(checkboxWithTitle: "Paste like typing", target: nil, action: nil)
+    private let typingSpeed = NSPopUpButton(frame: .zero, pullsDown: false)
+    private let typingStatus = NSTextField(wrappingLabelWithString: "Press Command-V in your destination. Esc stops typing.")
+    private let typingPaste = TypingPaste()
     private var timer: Timer?
     private var lastChange = -1
     private var currentText: String?
@@ -112,6 +116,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTa
         automatic.target = self
         automatic.action = #selector(toggleAutomatic)
         root.addArrangedSubview(automatic)
+        let typingOptions = NSStackView()
+        typingOptions.orientation = .horizontal
+        typingOptions.spacing = 10
+        typingMode.target = self
+        typingMode.action = #selector(toggleTyping)
+        typingMode.state = .off
+        typingOptions.addArrangedSubview(typingMode)
+        typingSpeed.addItems(withTitles: ["Slow", "Normal", "Fast"])
+        typingSpeed.selectItem(at: 1)
+        typingSpeed.isEnabled = false
+        typingSpeed.setAccessibilityLabel("Typing speed")
+        typingOptions.addArrangedSubview(typingSpeed)
+        root.addArrangedSubview(typingOptions)
+        typingStatus.font = .systemFont(ofSize: 11)
+        typingStatus.textColor = .secondaryLabelColor
+        typingStatus.isHidden = true
+        root.addArrangedSubview(typingStatus)
+        typingStatus.widthAnchor.constraint(equalTo: scroll.widthAnchor).isActive = true
+        typingPaste.speed = { [weak self] in
+            [0.14, 0.075, 0.035][max(0, self?.typingSpeed.indexOfSelectedItem ?? 1)]
+        }
+        typingPaste.status = { [weak self] message in self?.typingStatus.stringValue = message }
         let actions = NSStackView()
         actions.orientation = .horizontal
         actions.spacing = 10
@@ -318,6 +344,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTa
     }
 
     @objc private func clearClipboard() {
+        typingPaste.stop()
         let board = NSPasteboard.general
         board.clearContents()
         lastChange = board.changeCount
@@ -385,8 +412,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTa
         writePlain(text)
     }
 
+    @objc private func toggleTyping() {
+        if typingMode.state == .on {
+            if !typingPaste.enable() { typingMode.state = .off }
+        } else {
+            typingPaste.disable()
+        }
+        typingSpeed.isEnabled = typingMode.state == .on
+        typingStatus.isHidden = typingMode.state != .on && typingStatus.stringValue.isEmpty
+    }
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        if typingPaste.isRunning { typingPaste.stop() }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        typingPaste.disable()
+    }
+
     @objc private func toggleAutomatic() {
-        if automatic.state == .on { copyPlain() }
+        if automatic.state == .on {
+            refresh()
+            if let text = currentText { writePlain(text) }
+        }
     }
 }
 

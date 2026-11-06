@@ -18,9 +18,27 @@ History holds at most 1,000 text copies in memory, newest first, and discards th
 
 **Kopier → About Kopier** shows the app icon, name, version, and release date on separate centered lines.
 
-Click the pixel copier in the menu bar or the Dock icon to reopen the window. Quit with **Kopier → Quit Kopier**, **Command-Q**, or the Dock menu. Kopier does not paste into other apps automatically or require Accessibility permission.
+Click the pixel copier in the menu bar or the Dock icon to reopen the window. Quit with **Kopier → Quit Kopier**, **Command-Q**, or the Dock menu. Ordinary clipboard use does not require Accessibility permission.
 
 **Kopier → Check for Updates…** uses Sparkle to check the GitHub-hosted release feed. Available updates download, verify their signature, and install inside the app, with a relaunch when you approve. Incremental patches are used when available, with a full-download fallback. Checks are manual; background checks, automatic installation, and system profiling are disabled. Clipboard text and history never enter the updater.
+
+## Paste like typing
+
+**Paste like typing** starts off. Enable it and select **Slow**, **Normal**, or **Fast**. Click **Copy**, focus the destination text field, and press **Command-V** as usual. Kopier replaces that paste with the current clipboard text typed character by character with varied timing and longer pauses between words, at punctuation, and at line breaks. The Copy button still updates the clipboard. Speed changes apply to the next run.
+
+This optional mode requires permission in **System Settings → Privacy & Security → Accessibility**. Enabling the checkbox checks access silently and requests it at most once per launch if needed; after granting Kopier access, check the option again. Press **Escape**, return to Kopier, or switch apps to stop. Unchecking the option or clicking Clear also cancels. Copy never starts typing, and there is no countdown. With the option off, Command-V behaves normally. Pasting inside Kopier, modified shortcuts such as Command-Shift-V, and private or non-text copies use normal paste behavior. Repeated Command-V presses during typing are ignored. Text stays local and the typing session is discarded when stopped or finished.
+
+If Kopier is already enabled in Accessibility but still reports blocked access, the entry may belong to an older build or another copy. Quit Kopier, remove its old entry with the minus button in **System Settings → Privacy & Security → Accessibility**, then add the exact app you launch and enable it. For this checkout that is `Kopier.app` inside the repository folder. Reopen that same app and enable **Paste like typing**. Quitting clears session history. This refresh affects only Kopier; no full privacy reset is needed.
+
+Local builds use ad-hoc signing by default. Their signing identity changes when the executable changes, which can invalidate the previous permission. To keep a stable identity across builds, use an installed Apple Development or Developer ID Application certificate:
+
+```sh
+KOPIER_SIGNING_IDENTITY="Apple Development: Your Name (TEAMID)" ./build.sh
+```
+
+Use the same certificate and app location on subsequent builds. The first switch from ad-hoc signing still requires approving the newly signed app.
+
+Use a destination that accepts ordinary text input. Some apps handle simulated Unicode keystrokes differently. Line breaks and tabs are sent as text; destination behavior can vary. Try a short sample before a demo.
 
 ## Operation
 
@@ -60,6 +78,19 @@ swift -module-cache-path /private/tmp/kopier-module-cache /private/tmp/kopier-hi
 
 Checks cover the cap, ordering, eviction, fresh sessions, clearing, and Unicode preservation.
 
+Typing mode checks use a separate temporary clipboard:
+
+```sh
+cat Source/TypingPaste.swift Tests/TypingPasteTests.swift > /private/tmp/kopier-typing-tests.swift
+swift -module-cache-path /private/tmp/kopier-module-cache /private/tmp/kopier-typing-tests.swift
+```
+
+These check one composed character per typing step, exact text reconstruction and normal-paste fallback for private and non-text clipboard items. Intercepting Command-V and typing into another app should also be tried manually with Accessibility permission enabled.
+
+## Release 0.3-beta
+
+Adds optional character-by-character typing on Command-V, with Slow, Normal, and Fast speeds and natural pauses. Accessibility permission is required only for this mode; local rebuilds may require refreshing its system permission. Permission prompts are limited to once per launch.
+
 ## Release 0.2-beta
 
 The GitHub release includes an Apple Silicon app archive. Requires macOS 13 or later. The beta is locally signed and is not Developer ID signed or notarized.
@@ -78,4 +109,4 @@ The script builds and verifies the app, creates a ZIP named `Kopier-VERSION-maco
 
 The first Sparkle-enabled version must be installed manually by existing 0.1-beta users. Subsequent releases can update in the app. Until the first feed is published, update checks report a feed error. Test installation between two distinct builds before distributing; delta generation alone does not verify the full installed update flow.
 
-Local builds remain ad-hoc signed. Developer ID signing and notarization are still recommended for public distribution; integrating Sparkle does not provide those credentials. The embedded Sparkle framework and helpers retain their upstream signatures.
+Local builds are ad-hoc signed unless `KOPIER_SIGNING_IDENTITY` is set. Developer ID signing and notarization are still recommended for public distribution; integrating Sparkle does not provide those credentials. The embedded Sparkle framework and helpers retain their upstream signatures.

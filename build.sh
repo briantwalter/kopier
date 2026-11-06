@@ -32,4 +32,4 @@ for key in CFBundleShortVersionString CFBundleVersion KopierReleaseDate SUFeedUR
     /usr/libexec/PlistBuddy -c "Add :$key string $value" Kopier.app/Contents/Info.plist
 done
 # Preserve Sparkle’s upstream signatures on its framework and helper tools.
-codesign --force --sign - Kopier.app
+codesign --force --sign "${KOPIER_SIGNING_IDENTITY:--}" Kopier.app
