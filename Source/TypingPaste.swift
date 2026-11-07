@@ -14,13 +14,23 @@ final class TypingPaste {
     private var index = 0
     private var target: NSRunningApplication?
     private var interval = 0.075
-    var status: ((String) -> Void)?
+    var failure: ((String) -> Void)?
+    private let typingSound = TypingSound()
+    var soundEnabled = true {
+        didSet { if !soundEnabled { typingSound.stop() } }
+    }
     var isRunning: Bool { timer != nil || target != nil }
 
     static func characters(in text: String) -> [String] {
         // Swift Characters keep emoji and combining marks together while preserving
         // every space, tab, and line break exactly as copied.
         text.map { String($0) }
+    }
+
+    /// Exponential interpolation gives the whole slider a useful, smooth range:
+    /// 220 ms per character at Slow, down to 1 ms at Fast.
+    static func interval(for position: Double) -> Double {
+        0.22 * pow(0.001 / 0.22, min(1, max(0, position)))
     }
 
     @discardableResult
@@ -34,7 +44,7 @@ final class TypingPaste {
                 let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
                 _ = AXIsProcessTrustedWithOptions(options)
             }
-            status?("Accessibility blocked. Re-add this Kopier app in Settings, then retry.")
+            failure?("Allow this app in System Settings → Privacy & Security → Accessibility. If it is already listed, remove the old entry and add the exact app you are running, then try again.")
             return false
         }
         let mask = (CGEventMask(1) << CGEventType.keyDown.rawValue) |
@@ -45,14 +55,13 @@ final class TypingPaste {
                 let owner = Unmanaged<TypingPaste>.fromOpaque(context).takeUnretainedValue()
                 return owner.handle(type, event: event)
             }, userInfo: Unmanaged.passUnretained(self).toOpaque()) else {
-            status?("Could not enable paste shortcut. Check Accessibility permission.")
+            failure?("Could not enable the paste shortcut. Check Accessibility permission for this app.")
             return false
         }
         eventTap = tap
         eventSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         CFRunLoopAddSource(CFRunLoopGetMain(), eventSource, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
-        status?("Press Command-V in your destination. Esc stops typing.")
         return true
     }
 
@@ -118,7 +127,6 @@ final class TypingPaste {
             }
         }
         // Wait for Command to be released so it cannot modify the typed text.
-        status?("Release Command to begin typing. Esc stops.")
         timer = Timer.scheduledTimer(withTimeInterval: 0.02, repeats: true) { [weak self] timer in
             guard let self = self else { timer.invalidate(); return }
             let held = CGEventSource.flagsState(.combinedSessionState)
@@ -143,7 +151,8 @@ final class TypingPaste {
         let units = Array(chunk.utf16)
         guard let down = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: true),
               let up = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: false) else {
-            stop("Unable to send typing events."); return
+            failure?("Unable to send typing events.")
+            stop(); return
         }
         for event in [down, up] {
             event.flags = []
@@ -152,8 +161,8 @@ final class TypingPaste {
             }
             event.postToPid(target.processIdentifier)
         }
+        if soundEnabled { typingSound.click() }
         index += 1
-        status?("Typing… Esc stops.")
         let pause: Double
         if chunk.contains(where: { $0.isNewline }) {
             pause = 6
@@ -174,10 +183,38 @@ final class TypingPaste {
     func stop(_ message: String = "Typing stopped.") {
         timer?.invalidate()
         timer = nil
+        typingSound.stop()
         target = nil
         chunks.removeAll()
         if let observer = activationObserver { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
         activationObserver = nil
-        status?(message)
+    }
+}
+
+/// Quiet excerpts from the user-selected Pixabay recording, played per key.
+private final class TypingSound {
+    private let sounds: [NSSound] = (1...6).compactMap { number in
+        guard let url = Bundle.main.url(forResource: "Key-\(number)", withExtension: "wav", subdirectory: "Keyboard"),
+              let sound = NSSound(contentsOf: url, byReference: false) else { return nil }
+        sound.volume = 0.35
+        sound.loops = false
+        sound.playbackDeviceIdentifier = nil // Follow the system's default output.
+        return sound
+    }
+    private var lastClick = -Double.infinity
+
+    func click() {
+        let now = ProcessInfo.processInfo.systemUptime
+        // At near-instant speeds, cap sound density instead of queueing a backlog.
+        guard now - lastClick >= 0.035,
+              let sound = sounds.filter({ !$0.isPlaying }).randomElement() else { return }
+        lastClick = now
+        sound.currentTime = 0
+        sound.play()
+    }
+
+    func stop() {
+        sounds.forEach { $0.stop() }
+        lastClick = -Double.infinity
     }
 }

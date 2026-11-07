@@ -7,10 +7,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTa
     private var statusItem: NSStatusItem!
     private var window: NSWindow!
     private let preview = ClipboardTextView()
-    private let automatic = NSButton(checkboxWithTitle: "Automatically remove formatting when I copy text", target: nil, action: nil)
+    private let automatic = NSButton(checkboxWithTitle: "Automatically remove formatting", target: nil, action: nil)
     private let typingMode = NSButton(checkboxWithTitle: "Paste like typing", target: nil, action: nil)
-    private let typingSpeed = NSPopUpButton(frame: .zero, pullsDown: false)
-    private let typingStatus = NSTextField(wrappingLabelWithString: "Press Command-V in your destination. Esc stops typing.")
+    private let typingSpeed = NSSlider(value: 0.2, minValue: 0, maxValue: 1, target: nil, action: nil)
+    private let speedOptions = NSStackView()
+    private let keyboardSound = NSButton(checkboxWithTitle: "Keyboard Sound", target: nil, action: nil)
+    private let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "Kopier"
+    private var isDevelopment: Bool { Bundle.main.bundleIdentifier == "local.kopier.dev" }
     private let typingPaste = TypingPaste()
     private var timer: Timer?
     private var lastChange = -1
@@ -24,7 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTa
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
-        updaterController.startUpdater()
+        if !isDevelopment { updaterController.startUpdater() }
         configureMenu()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let url = Bundle.main.url(forResource: "MenuIcon", withExtension: "png"), let icon = NSImage(contentsOf: url) {
@@ -32,7 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTa
             icon.isTemplate = true
             statusItem.button?.image = icon
         }
-        statusItem.button?.toolTip = "Kopier"
+        statusItem.button?.toolTip = appName
         statusItem.button?.target = self
         statusItem.button?.action = #selector(showWindow)
         lastChange = NSPasteboard.general.changeCount
@@ -44,10 +47,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTa
 
     private func createWindow() {
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 428), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.title = "Kopier"
+        window.title = appName
         window.titleVisibility = .hidden
         if let titleBar = window.standardWindowButton(.closeButton)?.superview {
-            let title = NSTextField(labelWithString: "Kopier")
+            let title = NSTextField(labelWithString: appName)
             title.identifier = NSUserInterfaceItemIdentifier("CenteredWindowTitle")
             title.font = .systemFont(ofSize: 13, weight: .semibold)
             title.alignment = .center
@@ -123,21 +126,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTa
         typingMode.action = #selector(toggleTyping)
         typingMode.state = .off
         typingOptions.addArrangedSubview(typingMode)
-        typingSpeed.addItems(withTitles: ["Slow", "Normal", "Fast"])
-        typingSpeed.selectItem(at: 1)
-        typingSpeed.isEnabled = false
-        typingSpeed.setAccessibilityLabel("Typing speed")
-        typingOptions.addArrangedSubview(typingSpeed)
         root.addArrangedSubview(typingOptions)
-        typingStatus.font = .systemFont(ofSize: 11)
-        typingStatus.textColor = .secondaryLabelColor
-        typingStatus.isHidden = true
-        root.addArrangedSubview(typingStatus)
-        typingStatus.widthAnchor.constraint(equalTo: scroll.widthAnchor).isActive = true
-        typingPaste.speed = { [weak self] in
-            [0.14, 0.075, 0.035][max(0, self?.typingSpeed.indexOfSelectedItem ?? 1)]
+        speedOptions.orientation = .horizontal
+        speedOptions.spacing = 6
+        for label in ["Slow", "Fast"] {
+            let text = NSTextField(labelWithString: label)
+            text.font = .systemFont(ofSize: 10)
+            text.textColor = .secondaryLabelColor
+            if label == "Fast" { speedOptions.addArrangedSubview(typingSpeed) }
+            speedOptions.addArrangedSubview(text)
         }
-        typingPaste.status = { [weak self] message in self?.typingStatus.stringValue = message }
+        typingSpeed.controlSize = .small
+        typingSpeed.isContinuous = true
+        typingSpeed.setAccessibilityLabel("Typing speed")
+        typingSpeed.widthAnchor.constraint(equalToConstant: 110).isActive = true
+        speedOptions.isHidden = true
+        typingOptions.addArrangedSubview(speedOptions)
+        keyboardSound.state = .on
+        keyboardSound.target = self
+        keyboardSound.action = #selector(toggleKeyboardSound)
+        keyboardSound.isHidden = true
+        root.addArrangedSubview(keyboardSound)
+        typingPaste.speed = { [weak self] in
+            TypingPaste.interval(for: self?.typingSpeed.doubleValue ?? 0.2)
+        }
+        // Permission failures need an explanation; normal typing has no status text.
+        typingPaste.failure = { [weak self] message in
+            let alert = NSAlert()
+            alert.messageText = "Paste like typing unavailable"
+            alert.informativeText = message
+            alert.addButton(withTitle: "OK")
+            if let window = self?.window { alert.beginSheetModal(for: window) }
+        }
         let actions = NSStackView()
         actions.orientation = .horizontal
         actions.spacing = 10
@@ -158,14 +178,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTa
     private func configureMenu() {
         let menu = NSMenu()
         let appItem = NSMenuItem()
-        let appMenu = NSMenu(title: "Kopier")
-        let about = appMenu.addItem(withTitle: "About Kopier", action: #selector(showAbout), keyEquivalent: "")
+        let appMenu = NSMenu(title: appName)
+        let about = appMenu.addItem(withTitle: "About \(appName)", action: #selector(showAbout), keyEquivalent: "")
         about.target = self
         appMenu.addItem(.separator())
-        let updates = appMenu.addItem(withTitle: "Check for Updates…", action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)), keyEquivalent: "")
-        updates.target = updaterController
-        appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Quit Kopier", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        if !isDevelopment {
+            let updates = appMenu.addItem(withTitle: "Check for Updates…", action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)), keyEquivalent: "")
+            updates.target = updaterController
+            appMenu.addItem(.separator())
+        }
+        appMenu.addItem(withTitle: "Quit \(appName)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
         menu.addItem(appItem)
         let editItem = NSMenuItem()
@@ -187,7 +209,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTa
         if aboutWindow == nil {
             let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 300),
                                 styleMask: [.titled, .closable], backing: .buffered, defer: false)
-            panel.title = "About Kopier"
+            panel.title = "About \(appName)"
             panel.isReleasedWhenClosed = false
             let stack = NSStackView()
             stack.orientation = .vertical
@@ -201,7 +223,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTa
             icon.heightAnchor.constraint(equalToConstant: 80).isActive = true
             icon.setAccessibilityLabel("Kopier icon")
             stack.addArrangedSubview(icon)
-            let name = NSTextField(labelWithString: "Kopier")
+            let name = NSTextField(labelWithString: appName)
             name.font = .boldSystemFont(ofSize: 22)
             name.alignment = .center
             stack.addArrangedSubview(name)
@@ -418,8 +440,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTa
         } else {
             typingPaste.disable()
         }
-        typingSpeed.isEnabled = typingMode.state == .on
-        typingStatus.isHidden = typingMode.state != .on && typingStatus.stringValue.isEmpty
+        speedOptions.isHidden = typingMode.state != .on
+        keyboardSound.isHidden = typingMode.state != .on
+    }
+
+    @objc private func toggleKeyboardSound() {
+        typingPaste.soundEnabled = keyboardSound.state == .on
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
