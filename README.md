@@ -10,7 +10,7 @@ Open `Kopier.app`. The 460 × 460 window starts with an empty editor and the pla
 2. Edit it if needed, then click **Copy**.
 3. Return to your destination and press **Command-V**.
 
-Automatic formatting removal starts checked. Fonts, colors, and rich text styles are removed; words, Unicode, and line breaks are preserved. Literal Markdown or HTML source remains text. Images and file copies without text are left alone. Common password-manager private clipboard markers are respected.
+**Automatically remove formatting** starts checked. Fonts, colors, and rich text styles are removed; words, Unicode, and line breaks are preserved. Literal Markdown or HTML source remains text. Images and file copies without text are left alone. Common password-manager private clipboard markers are respected.
 
 **Clear** empties the system clipboard and editor, restoring the placeholder. It keeps history. **Show History** opens the drawer; selecting an entry loads it into the editor so you can edit and **Copy** it. **Clear All** empties history only. **Hide History** closes the drawer.
 
@@ -24,11 +24,11 @@ Click the pixel copier in the menu bar or the Dock icon to reopen the window. Qu
 
 ## Paste like typing
 
-**Paste like typing** starts off. Enable it and select **Slow**, **Normal**, or **Fast**. Click **Copy**, focus the destination text field, and press **Command-V** as usual. Kopier replaces that paste with the current clipboard text typed character by character with varied timing and longer pauses between words, at punctuation, and at line breaks. The Copy button still updates the clipboard. Speed changes apply to the next run.
+**Paste like typing** starts off. Enable it and use the compact speed slider to the right of the checkbox, from **Slow** to **Fast**. The slider appears only while **Paste like typing** is checked. The speed changes continuously from deliberate typing (about 220 ms per character) to nearly instant typing (about 1 ms per character), plus natural pauses. Click **Copy**, focus the destination text field, and press **Command-V** as usual. Kopier replaces that paste with the current clipboard text typed character by character with varied timing and longer pauses between words, at punctuation, and at line breaks. The Copy button still updates the clipboard. Speed changes apply to the next run. **Keyboard Sound** appears only while **Paste like typing** is checked. It starts checked; uncheck it for silent typing. The quiet key taps are edited excerpts from [Keyboard Typing by Trollarch2 (Freesound), via Pixabay](https://pixabay.com/sound-effects/technology-keyboard-typing-5997/), included under the Pixabay Content License. Source details and reproduction instructions are in `Assets/Keyboard/README.md`. They play through the system default audio output only during the typing paste and stop immediately when sound is unchecked or the paste is cancelled. No instruction text appears when the option is enabled.
 
 This optional mode requires permission in **System Settings → Privacy & Security → Accessibility**. Enabling the checkbox checks access silently and requests it at most once per launch if needed; after granting Kopier access, check the option again. Press **Escape**, return to Kopier, or switch apps to stop. Unchecking the option or clicking Clear also cancels. Copy never starts typing, and there is no countdown. With the option off, Command-V behaves normally. Pasting inside Kopier, modified shortcuts such as Command-Shift-V, and private or non-text copies use normal paste behavior. Repeated Command-V presses during typing are ignored. Text stays local and the typing session is discarded when stopped or finished.
 
-If Kopier is already enabled in Accessibility but still reports blocked access, the entry may belong to an older build or another copy. Quit Kopier, remove its old entry with the minus button in **System Settings → Privacy & Security → Accessibility**, then add the exact app you launch and enable it. For this checkout that is `Kopier.app` inside the repository folder. Reopen that same app and enable **Paste like typing**. Quitting clears session history. This refresh affects only Kopier; no full privacy reset is needed.
+If Kopier is already enabled in Accessibility but still reports blocked access, the entry may belong to an older build or another copy. Quit Kopier, remove its old entry with the minus button in **System Settings → Privacy & Security → Accessibility**, then add the exact app you launch and enable it. For local development that is `Kopier-dev.app` inside the repository folder, listed separately as **Kopier-dev**. Reopen that same app and enable **Paste like typing**. Quitting clears session history. This refresh affects only Kopier; no full privacy reset is needed.
 
 Local builds use ad-hoc signing by default. Their signing identity changes when the executable changes, which can invalidate the previous permission. To keep a stable identity across builds, use an installed Apple Development or Developer ID Application certificate:
 
@@ -64,10 +64,12 @@ Requires macOS 13 or later with Apple's Swift command line tools or Xcode. Spark
 
 ```sh
 ./build.sh
-open Kopier.app
+open Kopier-dev.app
 ```
 
-The build regenerates the pixel copier assets using `Scripts/MakeIcon.swift`, packages `Kopier.app`, and signs it locally. It is not notarized for public distribution. The color icon is used for the app and its monochrome version for the menu bar.
+The build regenerates the pixel copier assets using `Scripts/MakeIcon.swift`, packages `Kopier-dev.app` with a separate `local.kopier.dev` identity, and signs it locally. Its window, Dock name, menu, and Accessibility entry are labeled **Kopier-dev**, and release update checks are disabled. It can coexist with the installed release. Enable typing mode in only one copy at a time so both do not intercept Command-V. It is not notarized for public distribution. The color icon is used for the app and its monochrome version for the menu bar.
+
+To build the release app as `Kopier.app`, use `./build.sh --release`. `Scripts/PrepareRelease.sh` always selects this release mode; downloaded releases keep the name **Kopier** and the existing `local.kopier.app` identity. Local and release builds require separate Accessibility approvals.
 
 ## History checks
 
@@ -86,6 +88,10 @@ swift -module-cache-path /private/tmp/kopier-module-cache /private/tmp/kopier-ty
 ```
 
 These check one composed character per typing step, exact text reconstruction and normal-paste fallback for private and non-text clipboard items. Intercepting Command-V and typing into another app should also be tried manually with Accessibility permission enabled.
+
+## Release 0.4-beta
+
+Adds a compact continuous Slow–Fast slider beside **Paste like typing**, visible only while enabled, with speeds up to nearly instant. Adds an optional **Keyboard Sound** checkbox using quiet excerpts from the selected Pixabay recording. Removes the instruction text and shortens the formatting checkbox label. Local builds are now **Kopier-dev.app**, with a separate identity; release builds remain **Kopier.app**.
 
 ## Release 0.3-beta
 

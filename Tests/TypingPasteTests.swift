@@ -6,6 +6,14 @@ for sample in samples {
     precondition(characters.allSatisfy { $0.count == 1 })
 }
 precondition(TypingPaste.characters(in: "Hi 👩🏽‍💻e\u{301}") == ["H", "i", " ", "👩🏽‍💻", "e\u{301}"])
+precondition(abs(TypingPaste.interval(for: 0) - 0.22) < 0.000001)
+precondition(abs(TypingPaste.interval(for: 1) - 0.001) < 0.000001)
+var previous = TypingPaste.interval(for: 0)
+for step in 1...100 {
+    let current = TypingPaste.interval(for: Double(step) / 100)
+    precondition(current < previous)
+    previous = current
+}
 let board = NSPasteboard.withUniqueName()
 defer { board.releaseGlobally() }
 board.setString("Hello 👋\n  world", forType: .string)

@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 tag="${1:?Usage: Scripts/PrepareRelease.sh TAG (for example v0.2-beta)}"
 version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' ReleaseConfig.plist)
 [[ "$tag" == "v$version" ]] || { print -u2 'Tag must match v + the version in ReleaseConfig.plist'; exit 1; }
-./build.sh
+./build.sh --release
 codesign --verify --deep --strict Kopier.app
 mkdir -p releases
 previous_appcast="$(mktemp /private/tmp/kopier-appcast.XXXXXX)"
