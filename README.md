@@ -12,7 +12,7 @@ Open `Kopier.app`. The 460 × 460 window starts with an empty editor and the pla
 
 **Automatically remove formatting** starts checked. Fonts, colors, and rich text styles are removed; words, Unicode, and line breaks are preserved. Literal Markdown or HTML source remains text. Images and file copies without text are left alone. Common password-manager private clipboard markers are respected.
 
-**Clear** empties the system clipboard and editor, restoring the placeholder. It keeps history. **Show History** opens the drawer; selecting an entry loads it into the editor so you can edit and **Copy** it. **Clear All** empties history only. **Hide History** closes the drawer.
+**Clear** empties the system clipboard and editor and removes any history entries that exactly match the editor text. **Show History** opens the drawer. Selecting an entry loads it into the editor so you can edit and **Copy** it. **Clear All** empties the system clipboard, editor, and entire history. Both clear actions restore the placeholder. **Hide History** closes the drawer.
 
 History holds at most 1,000 text copies in memory, newest first, and discards the oldest when full. Quitting clears it. Nothing is saved to disk or sent over the network. Reusing an entry does not add a duplicate record. Entries wrap and resize with the window; separators appear only on actual entries.
 
@@ -53,8 +53,8 @@ flowchart TD
     History -->|Select entry| Editor
     Editor -->|Copy| Clipboard
     Clipboard -->|Command-V| Destination[Paste into another app]
-    Clear[Clear] --> Empty[Empty clipboard and restore placeholder]
-    ClearAll[Clear All] --> EmptyHistory[Empty history only]
+    Clear[Clear] --> Empty[Empty clipboard and editor and remove matching history entries]
+    ClearAll[Clear All] --> EmptyHistory[Empty clipboard, editor, and history]
     Quit[Quit] --> Discard[Discard session history]
 ```
 
@@ -88,6 +88,10 @@ swift -module-cache-path /private/tmp/kopier-module-cache /private/tmp/kopier-ty
 ```
 
 These check one composed character per typing step, exact text reconstruction and normal-paste fallback for private and non-text clipboard items. Intercepting Command-V and typing into another app should also be tried manually with Accessibility permission enabled.
+
+## Release 0.5-beta
+
+**Clear** empties the editor and system clipboard and removes exact matches from history. **Clear All** empties the editor, system clipboard, and entire history.
 
 ## Release 0.4-beta
 
