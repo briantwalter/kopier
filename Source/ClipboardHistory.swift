@@ -13,5 +13,9 @@ struct ClipboardHistory {
         }
     }
 
+    mutating func removeMatches(for text: String) {
+        records.removeAll { $0.utf8.elementsEqual(text.utf8) }
+    }
+
     mutating func removeAll() { records.removeAll() }
 }

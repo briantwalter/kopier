@@ -366,18 +366,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTa
     }
 
     @objc private func clearClipboard() {
-        typingPaste.stop()
-        let board = NSPasteboard.general
-        board.clearContents()
-        lastChange = board.changeCount
-        historyTable.deselectAll(nil)
-        loadText(nil)
+        if let text = currentText {
+            history.removeMatches(for: text)
+        }
+        clearBuffer()
+        reloadHistory()
     }
 
     @objc private func clearHistory() {
         history.removeAll()
+        clearBuffer()
+        reloadHistory()
+    }
+
+    private func clearBuffer() {
+        typingPaste.stop()
+        let board = NSPasteboard.general
+        board.clearContents()
+        lastChange = board.changeCount
+        loadText(nil)
+    }
+
+    private func reloadHistory() {
+        historyTable.deselectAll(nil)
         historyTable.reloadData()
-        historyCount.stringValue = "0 / 1,000 copies"
+        historyCount.stringValue = "\(history.count) / 1,000 copies"
     }
 
     @objc private func showWindow() {
@@ -414,9 +427,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTa
         loadText(currentText)
         if let text = currentText {
             history.record(text)
-            historyTable.deselectAll(nil)
-            historyTable.reloadData()
-            historyCount.stringValue = "\(history.count) / 1,000 copies"
+            reloadHistory()
             if automatic.state == .on { writePlain(text) }
         }
     }

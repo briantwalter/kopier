@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-<key>CFBundleShortVersionString</key><string>0.4-beta</string>
-<key>KopierReleaseDate</key><string>November 6, 2026</string>
-<key>CFBundleVersion</key><string>4</string>
+<key>CFBundleShortVersionString</key><string>0.5-beta</string>
+<key>KopierReleaseDate</key><string>November 11, 2026</string>
+<key>CFBundleVersion</key><string>5</string>
 <key>SUFeedURL</key><string>https://github.com/briantwalter/kopier/releases/latest/download/appcast.xml</string>
 <key>SUPublicEDKey</key><string>VomyVJMsjE94JjfzpJibHx7L1Ar43dproOaOZh/Nwk4=</string>
 </dict></plist>
